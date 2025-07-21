@@ -1,0 +1,240 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+from codigo import conectar
+
+janela = tk.Tk()
+janela.title("Sistema de Gestão de Armazém")
+janela.geometry("1000x700")
+
+abas = ttk.Notebook(janela)
+abas.pack(fill='both', expand=True)
+
+# -------------------------------
+# Produto
+# -------------------------------
+aba_produto = ttk.Frame(abas)
+abas.add(aba_produto, text="Produto")
+
+#Formulario
+form_produto = tk.Frame(aba_produto)
+form_produto.pack(pady=10)
+
+entrys_produto = {}
+campos_produto = ["produto_id", "nome", "descricao", "peso", "data_validade", "categoria_id"]
+for i, campo in enumerate(campos_produto):
+    tk.Label(form_produto, text=campo).grid(row=i, column=0)
+    entry = tk.Entry(form_produto)
+    entry.grid(row=i, column=1)
+    entrys_produto[campo] = entry
+frame_busca = tk.Frame(aba_produto)
+frame_busca.pack(pady=10)
+
+tk.Label(frame_busca, text="Buscar por ID:").grid(row=0, column=0)
+entry_busca_id = tk.Entry(frame_busca)
+entry_busca_id.grid(row=0, column=1)
+
+tk.Label(frame_busca, text="Buscar por Nome:").grid(row=0, column=2)
+entry_busca_nome = tk.Entry(frame_busca)
+entry_busca_nome.grid(row=0, column=3)
+
+
+
+
+
+def inserir_produto():
+    try:
+        con = conectar()
+        cur = con.cursor()
+        cur.execute("""
+            INSERT INTO Produto (produto_id, nome, descricao, peso, data_validade, categoria_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, tuple(entrys_produto[c].get() for c in campos_produto))
+        con.commit()
+        cur.close()
+        con.close()
+        listar_produtos()
+        messagebox.showinfo("Sucesso", "Produto inserido com sucesso.")
+    except Exception as e:
+        messagebox.showerror("Erro", str(e))
+
+def listar_produtos():
+    for i in tree_produto.get_children():
+        tree_produto.delete(i)
+    try:
+        con = conectar()
+        cur = con.cursor()
+        cur.execute("SELECT * FROM Produto p ORDER BY p.produto_id ASC")
+        for row in cur.fetchall():
+            tree_produto.insert("", tk.END, values=row)
+        cur.close()
+        con.close()
+    except Exception as e:
+        messagebox.showerror("Erro", str(e))
+
+def atualizar_produto():
+    try:
+        con = conectar()
+        cur = con.cursor()
+        cur.execute("""
+            UPDATE Produto
+            SET nome = %s,
+                descricao = %s,
+                peso = %s,
+                data_validade = %s,
+                categoria_id = %s
+            WHERE produto_id = %s
+        """, (
+            entrys_produto["nome"].get(),
+            entrys_produto["descricao"].get(),
+            entrys_produto["peso"].get(),
+            entrys_produto["data_validade"].get(),
+            entrys_produto["categoria_id"].get(),
+            entrys_produto["produto_id"].get()
+        ))
+        con.commit()
+        cur.close()
+        con.close()
+        listar_produtos()
+        messagebox.showinfo("Sucesso", "Produto atualizado com sucesso.")
+    except Exception as e:
+        messagebox.showerror("Erro", str(e))
+
+def remover_produto():
+    selected = tree_produto.focus()
+    if not selected:
+        messagebox.showwarning("Aviso", "Selecione um produto para remover.")
+        return
+
+    valores = tree_produto.item(selected, 'values')
+    produto_id = valores[0]
+
+    confirm = messagebox.askyesno("Confirmar", f"Tem certeza que deseja remover o produto ID {produto_id}?\nTodos os registros relacionados também serão removidos.")
+    if not confirm:
+        return
+
+    try:
+        con = conectar()
+        cur = con.cursor()
+
+        # Remove das tabelas que referenciam Produto
+        cur.execute("DELETE FROM ProdutoFornecedor WHERE produto_id = %s", (produto_id,))
+        cur.execute("DELETE FROM Estoque WHERE produto_id = %s", (produto_id,))
+        cur.execute("DELETE FROM Inventario WHERE produto_id = %s", (produto_id,))
+
+        # Agora pode remover o produto
+        cur.execute("DELETE FROM Produto WHERE produto_id = %s", (produto_id,))
+
+        con.commit()
+        cur.close()
+        con.close()
+        listar_produtos()
+        messagebox.showinfo("Sucesso", "Produto e registros relacionados removidos com sucesso.")
+    except Exception as e:
+        messagebox.showerror("Erro", str(e))
+
+def buscar_produto():
+    id_busca = entry_busca_id.get().strip()
+    nome_busca = entry_busca_nome.get().strip()
+
+    query = "SELECT * FROM Produto WHERE 1=1"
+    params = []
+
+    if id_busca:
+        query += " AND produto_id = %s"
+        params.append(id_busca)
+
+    if nome_busca:
+        query += " AND nome ILIKE %s"
+        params.append(f"%{nome_busca}%")
+
+    for i in tree_produto.get_children():
+        tree_produto.delete(i)
+
+    try:
+        con = conectar()
+        cur = con.cursor()
+        cur.execute(query, tuple(params))
+        for row in cur.fetchall():
+            tree_produto.insert("", tk.END, values=row)
+        cur.close()
+        con.close()
+    except Exception as e:
+        messagebox.showerror("Erro", str(e))
+
+
+#Botões Produto
+tk.Button(form_produto, text="Inserir Produto", command=inserir_produto).grid(row=len(campos_produto), columnspan=2, pady=10)
+tk.Button(form_produto, text="Atualizar Produto", command=atualizar_produto).grid(row=len(campos_produto)+1, columnspan=2, pady=5)
+tk.Button(form_produto, text="Remover Produto", command=remover_produto).grid(row=len(campos_produto)+2, columnspan=2, pady=5)
+tk.Button(frame_busca, text="Buscar", command=buscar_produto).grid(row=0, column=4, padx=10)
+
+
+tree_produto = ttk.Treeview(aba_produto, columns=campos_produto, show='headings')
+for c in campos_produto:
+    tree_produto.heading(c, text=c)
+tree_produto.pack(fill='both', expand=True, padx=10, pady=10)
+
+tk.Button(aba_produto, text="Listar Produtos", command=listar_produtos).pack(pady=10)
+
+# -------------------------------
+# Fornecedor
+# -------------------------------
+aba_fornecedor = ttk.Frame(abas)
+abas.add(aba_fornecedor, text="Fornecedor")
+
+form_forn = tk.Frame(aba_fornecedor)
+form_forn.pack(pady=10)
+
+entrys_forn = {}
+campos_forn = ["fornecedor_id", "nome", "cnpj", "endereco", "telefone", "email"]
+for i, campo in enumerate(campos_forn):
+    tk.Label(form_forn, text=campo).grid(row=i, column=0)
+    entry = tk.Entry(form_forn)
+    entry.grid(row=i, column=1)
+    entrys_forn[campo] = entry
+
+def inserir_fornecedor():
+    try:
+        con = conectar()
+        cur = con.cursor()
+        cur.execute("""
+            INSERT INTO Fornecedor (fornecedor_id, nome, cnpj, endereco, telefone, email)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, tuple(entrys_forn[c].get() for c in campos_forn))
+        con.commit()
+        cur.close()
+        con.close()
+        listar_fornecedores()
+        messagebox.showinfo("Sucesso", "Fornecedor inserido com sucesso.")
+    except Exception as e:
+        messagebox.showerror("Erro", str(e))
+
+def listar_fornecedores():
+    for i in tree_forn.get_children():
+        tree_forn.delete(i)
+    try:
+        con = conectar()
+        cur = con.cursor()
+        cur.execute("SELECT * FROM Fornecedor")
+        for row in cur.fetchall():
+            tree_forn.insert("", tk.END, values=row)
+        cur.close()
+        con.close()
+    except Exception as e:
+        messagebox.showerror("Erro", str(e))
+
+tk.Button(form_forn, text="Inserir Fornecedor", command=inserir_fornecedor).grid(row=len(campos_forn), columnspan=2, pady=10)
+
+tree_forn = ttk.Treeview(aba_fornecedor, columns=campos_forn, show='headings')
+for c in campos_forn:
+    tree_forn.heading(c, text=c)
+tree_forn.pack(fill='both', expand=True, padx=10, pady=10)
+
+tk.Button(aba_fornecedor, text="Listar Fornecedores", command=listar_fornecedores).pack(pady=10)
+
+# -------------------------------
+# 
+# -------------------------------
+
+
+janela.mainloop()
