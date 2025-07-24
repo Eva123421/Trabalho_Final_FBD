@@ -115,12 +115,7 @@ def remover_produto():
     try:
         con = conectar()
         cur = con.cursor()
-
-        # Remove das tabelas que referenciam Produto
-        cur.execute("DELETE FROM ProdutoFornecedor WHERE produto_id = %s", (produto_id,))
-        cur.execute("DELETE FROM Estoque WHERE produto_id = %s", (produto_id,))
-        cur.execute("DELETE FROM Inventario WHERE produto_id = %s", (produto_id,))
-
+    
         # Agora pode remover o produto
         cur.execute("DELETE FROM Produto WHERE produto_id = %s", (produto_id,))
 
