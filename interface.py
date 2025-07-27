@@ -950,17 +950,19 @@ tk.Button(aba_inventario, text="Listar Inventários", command=listar_inventarios
 aba_consultas = ttk.Frame(abas)
 abas.add(aba_consultas, text="Consultas Avançadas")
 
-# Frame de botão e resultado
-frame_top = ttk.Frame(aba_consultas)
-frame_top.pack(pady=10)
+frame_grid = ttk.Frame(aba_consultas)
+frame_grid.pack(fill='both', expand=True, padx=10, pady=10)
 
-# Botão para executar a consulta
-def executar_consulta():
+#--------------------------------
+# Consulta 1: Produtos por Fornecedor
+#--------------------------------
+frame_fornecedores = ttk.LabelFrame(frame_grid, text="Produtos por Fornecedor")
+frame_fornecedores.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
+
+def executar_consulta_fornecedores():
     try:
         conn = conectar()
         cur = conn.cursor()
-
-        # Consulta: quantidade de produtos por fornecedor
         cur.execute("""
             SELECT 
                 f.nome AS fornecedor,
@@ -975,13 +977,11 @@ def executar_consulta():
                 quantidade_produtos DESC;
         """)
 
-        # Limpar tabela
-        for item in tabela.get_children():
-            tabela.delete(item)
+        for item in tabela_fornecedores.get_children():
+            tabela_fornecedores.delete(item)
 
-        # Inserir resultados
         for linha in cur.fetchall():
-            tabela.insert('', 'end', values=linha)
+            tabela_fornecedores.insert('', 'end', values=linha)
 
         cur.close()
         conn.close()
@@ -989,20 +989,205 @@ def executar_consulta():
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao executar consulta:\n{e}")
 
-# Botão
-botao_consulta = ttk.Button(frame_top, text="Mostrar Produtos por Fornecedor", command=executar_consulta)
-botao_consulta.pack()
+botao_fornecedores = ttk.Button(frame_fornecedores, text="Mostrar Produtos por Fornecedor", command=executar_consulta_fornecedores)
+botao_fornecedores.pack(pady=5)
 
-# Tabela para exibir os resultados
-colunas = ("Fornecedor", "Quantidade de Produtos")
-tabela = ttk.Treeview(aba_consultas, columns=colunas, show="headings", height=10)
+colunas1 = ("Fornecedor", "Quantidade de Produtos")
+tabela_fornecedores = ttk.Treeview(frame_fornecedores, columns=colunas1, show="headings", height=6)
+for col in colunas1:
+    tabela_fornecedores.heading(col, text=col)
+    tabela_fornecedores.column(col, width=250)
+tabela_fornecedores.pack(pady=5)
 
-for col in colunas:
-    tabela.heading(col, text=col)
-    tabela.column(col, width=250)
+#--------------------------------
+# Consulta 2: Total por Tipo de Local
+#--------------------------------
 
-tabela.pack(pady=10)
+frame_locais = ttk.LabelFrame(frame_grid, text="Total de Produtos por Tipo de Local")
+frame_locais.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
 
+def executar_consulta_locais():
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT 
+                l.tipo AS categoria_local,
+                SUM(e.quantidade) AS total_produtos
+            FROM 
+                Estoque e
+            JOIN 
+                LocalArmazenagem l ON e.local_id = l.local_id
+            GROUP BY 
+                l.tipo
+            ORDER BY 
+                total_produtos DESC;
+        """)
+
+        for item in tabela_locais.get_children():
+            tabela_locais.delete(item)
+
+        for linha in cur.fetchall():
+            tabela_locais.insert('', 'end', values=linha)
+
+        cur.close()
+        conn.close()
+
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao executar consulta:\n{e}")
+
+botao_locais = ttk.Button(frame_locais, text="Mostrar Total por Tipo de Local", command=executar_consulta_locais)
+botao_locais.pack(pady=5)
+
+colunas2 = ("Categoria de Local", "Total de Produtos")
+tabela_locais = ttk.Treeview(frame_locais, columns=colunas2, show="headings", height=6)
+for col in colunas2:
+    tabela_locais.heading(col, text=col)
+    tabela_locais.column(col, width=250)
+tabela_locais.pack(pady=5)
+
+#--------------------------------
+# Consulta 3: Total de Estoque por Categoria de Produto
+#--------------------------------
+
+frame_categorias = ttk.LabelFrame(frame_grid, text="Total de Produtos por Categoria")
+frame_categorias.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
+
+def executar_consulta_categorias():
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT 
+                c.nome AS categoria, 
+                SUM(e.quantidade) AS total_estoque
+            FROM 
+                Estoque e
+            JOIN 
+                Produto p ON p.produto_id = e.produto_id
+            JOIN 
+                Categoria c ON c.categoria_id = p.categoria_id
+            GROUP BY 
+                c.nome
+            ORDER BY 
+                total_estoque DESC;
+        """)
+
+        for item in tabela_categorias.get_children():
+            tabela_categorias.delete(item)
+
+        for linha in cur.fetchall():
+            tabela_categorias.insert('', 'end', values=linha)
+
+        cur.close()
+        conn.close()
+
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao executar consulta:\n{e}")
+
+botao_categorias = ttk.Button(frame_categorias, text="Mostrar Estoque por Categoria", command=executar_consulta_categorias)
+botao_categorias.pack(pady=5)
+
+colunas3 = ("Categoria", "Total em Estoque")
+tabela_categorias = ttk.Treeview(frame_categorias, columns=colunas3, show="headings", height=6)
+for col in colunas3:
+    tabela_categorias.heading(col, text=col)
+    tabela_categorias.column(col, width=250)
+tabela_categorias.pack(pady=5)
+
+#--------------------------------
+# Consulta 4: Produtos com mais de um fornecedor
+#--------------------------------
+
+frame_multifornecedores = ttk.LabelFrame(frame_grid, text="Produtos com Mais de um Fornecedor")
+frame_multifornecedores.grid(row=1, column=1, padx=10, pady=10, sticky='nsew')
+
+
+def executar_consulta_multifornecedores():
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT 
+                p.nome, 
+                COUNT(*) AS qtd_fornecedores 
+            FROM 
+                ProdutoFornecedor pf
+            JOIN 
+                Produto p ON p.produto_id = pf.produto_id
+            GROUP BY 
+                p.nome
+            HAVING 
+                COUNT(*) > 1
+            ORDER BY 
+                qtd_fornecedores DESC;
+        """)
+
+        for item in tabela_multifornecedores.get_children():
+            tabela_multifornecedores.delete(item)
+
+        for linha in cur.fetchall():
+            tabela_multifornecedores.insert('', 'end', values=linha)
+
+        cur.close()
+        conn.close()
+
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao executar consulta:\n{e}")
+
+botao_multifornecedores = ttk.Button(frame_multifornecedores, text="Mostrar Produtos com +1 Fornecedor", command=executar_consulta_multifornecedores)
+botao_multifornecedores.pack(pady=5)
+
+colunas4 = ("Produto", "Qtd. de Fornecedores")
+tabela_multifornecedores = ttk.Treeview(frame_multifornecedores, columns=colunas4, show="headings", height=6)
+for col in colunas4:
+    tabela_multifornecedores.heading(col, text=col)
+    tabela_multifornecedores.column(col, width=250)
+tabela_multifornecedores.pack(pady=5)
+
+#--------------------------------
+#  Consulta 5: Fornecedores com Produtos em Estoque
+#--------------------------------
+
+frame_fornecedores_estoque = ttk.LabelFrame(frame_grid, text="Fornecedores com Produtos em Estoque")
+frame_fornecedores_estoque.grid(row=2, column=0, padx=10, pady=10, sticky='nsew')
+
+def executar_consulta_fornecedores_estoque():
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT DISTINCT 
+                f.nome AS fornecedor
+            FROM 
+                Fornecedor f
+            JOIN 
+                ProdutoFornecedor pf ON pf.fornecedor_id = f.fornecedor_id
+            JOIN 
+                Estoque e ON e.produto_id = pf.produto_id;
+        """)
+
+        for item in tabela_fornecedores_estoque.get_children():
+            tabela_fornecedores_estoque.delete(item)
+
+        for linha in cur.fetchall():
+            tabela_fornecedores_estoque.insert('', 'end', values=linha)
+
+        cur.close()
+        conn.close()
+
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao executar consulta:\n{e}")
+
+botao_fornecedores_estoque = ttk.Button(frame_fornecedores_estoque, text="Mostrar Fornecedores com Produtos no Estoque", command=executar_consulta_fornecedores_estoque)
+botao_fornecedores_estoque.pack(pady=5)
+
+colunas5 = ("Fornecedor",)
+tabela_fornecedores_estoque = ttk.Treeview(frame_fornecedores_estoque, columns=colunas5, show="headings", height=6)
+for col in colunas5:
+    tabela_fornecedores_estoque.heading(col, text=col)
+    tabela_fornecedores_estoque.column(col, width=250)
+tabela_fornecedores_estoque.pack(pady=5)
 
 
 janela.mainloop()
