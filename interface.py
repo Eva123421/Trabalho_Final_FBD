@@ -950,5 +950,59 @@ tk.Button(aba_inventario, text="Listar Inventários", command=listar_inventarios
 aba_consultas = ttk.Frame(abas)
 abas.add(aba_consultas, text="Consultas Avançadas")
 
+# Frame de botão e resultado
+frame_top = ttk.Frame(aba_consultas)
+frame_top.pack(pady=10)
+
+# Botão para executar a consulta
+def executar_consulta():
+    try:
+        conn = conectar()
+        cur = conn.cursor()
+
+        # Consulta: quantidade de produtos por fornecedor
+        cur.execute("""
+            SELECT 
+                f.nome AS fornecedor,
+                COUNT(pf.produto_id) AS quantidade_produtos
+            FROM 
+                Fornecedor f
+            JOIN 
+                ProdutoFornecedor pf ON f.fornecedor_id = pf.fornecedor_id
+            GROUP BY 
+                f.nome
+            ORDER BY 
+                quantidade_produtos DESC;
+        """)
+
+        # Limpar tabela
+        for item in tabela.get_children():
+            tabela.delete(item)
+
+        # Inserir resultados
+        for linha in cur.fetchall():
+            tabela.insert('', 'end', values=linha)
+
+        cur.close()
+        conn.close()
+
+    except Exception as e:
+        messagebox.showerror("Erro", f"Erro ao executar consulta:\n{e}")
+
+# Botão
+botao_consulta = ttk.Button(frame_top, text="Mostrar Produtos por Fornecedor", command=executar_consulta)
+botao_consulta.pack()
+
+# Tabela para exibir os resultados
+colunas = ("Fornecedor", "Quantidade de Produtos")
+tabela = ttk.Treeview(aba_consultas, columns=colunas, show="headings", height=10)
+
+for col in colunas:
+    tabela.heading(col, text=col)
+    tabela.column(col, width=250)
+
+tabela.pack(pady=10)
+
+
 
 janela.mainloop()
