@@ -614,7 +614,7 @@ tk.Button(form_categoria, text="Atualizar Categoria", command=atualizar_categori
 tk.Button(form_categoria, text="Remover Categoria", command=remover_categoria).grid(row=len(campos_categoria)+2, columnspan=2, pady=5)
 tk.Button(frame_busca_categoria, text="Buscar", command=buscar_categoria).grid(row=0, column=4, padx=10)
 
-# Treeview Categoria
+
 tree_categoria = ttk.Treeview(aba_categoria, columns=["categoria_id", "nome"], show='headings')
 for c in ["categoria_id", "nome"]:
     tree_categoria.heading(c, text=c)
@@ -642,13 +642,17 @@ for i, campo in enumerate(campos_local):
     entry.grid(row=i, column=1)
     entrys_local[campo] = entry
 
-# Campo de busca por ID
+# Campo de busca 
 frame_busca_local = tk.Frame(aba_local)
 frame_busca_local.pack(pady=10)
 
 tk.Label(frame_busca_local, text="Buscar por ID:").grid(row=0, column=0)
 entry_busca_local_id = tk.Entry(frame_busca_local)
 entry_busca_local_id.grid(row=0, column=1)
+
+tk.Label(frame_busca_local, text="Buscar por Nome:").grid(row=0, column=2)
+entry_busca_local_nome = tk.Entry(frame_busca_local)
+entry_busca_local_nome.grid(row=0, column=3)
 
 # Funções Local
 def inserir_local():
@@ -734,6 +738,7 @@ def remover_local():
 
 def buscar_local():
     id_busca = entry_busca_local_id.get().strip()
+    nome_busca = entry_busca_local_nome.get().strip()
 
     query = "SELECT local_id, nome, tipo, capacidade_maxima, descricao FROM LocalArmazenagem WHERE 1=1"
     params = []
@@ -741,6 +746,10 @@ def buscar_local():
     if id_busca:
         query += " AND local_id = %s"
         params.append(id_busca)
+
+    if nome_busca:
+        query += " AND nome ILIKE %s"
+        params.append(f"%{nome_busca}%")
 
     for i in tree_local.get_children():
         tree_local.delete(i)
@@ -760,9 +769,9 @@ def buscar_local():
 tk.Button(form_local, text="Inserir Local", command=inserir_local).grid(row=len(campos_local), columnspan=2, pady=10)
 tk.Button(form_local, text="Atualizar Local", command=atualizar_local).grid(row=len(campos_local)+1, columnspan=2, pady=5)
 tk.Button(form_local, text="Remover Local", command=remover_local).grid(row=len(campos_local)+2, columnspan=2, pady=5)
-tk.Button(frame_busca_local, text="Buscar", command=buscar_local).grid(row=0, column=2, padx=10)
+tk.Button(frame_busca_local, text="Buscar", command=buscar_local).grid(row=0, column=4, padx=10)
 
-# Treeview Local
+
 tree_local = ttk.Treeview(aba_local, columns=campos_local, show='headings')
 for c in campos_local:
     tree_local.heading(c, text=c)
@@ -789,7 +798,7 @@ for i, campo in enumerate(campos_inventario):
     entry.grid(row=i, column=1)
     entrys_inventario[campo] = entry
 
-# Busca por ID
+
 frame_busca_inventario = tk.Frame(aba_inventario)
 frame_busca_inventario.pack(pady=10)
 
@@ -797,7 +806,11 @@ tk.Label(frame_busca_inventario, text="Buscar por ID:").grid(row=0, column=0)
 entry_busca_inventario_id = tk.Entry(frame_busca_inventario)
 entry_busca_inventario_id.grid(row=0, column=1)
 
-# Funções CRUD Inventário
+tk.Label(frame_busca_inventario, text="Buscar por LocalID:").grid(row=0, column=2)
+entry_busca_inventario_localID = tk.Entry(frame_busca_inventario)
+entry_busca_inventario_localID.grid(row=0, column=3)
+
+# Funções Inventário
 def inserir_inventario():
     try:
         con = conectar()
@@ -890,6 +903,7 @@ def remover_inventario():
 
 def buscar_inventario():
     id_busca = entry_busca_inventario_id.get().strip()
+    localID_busca = entry_busca_inventario_localID.get().strip()
 
     query = "SELECT inventario_id, produto_id, local_id, data, quantidade_sistema, quantidade_fisica, observacoes FROM Inventario WHERE 1=1"
     params = []
@@ -897,6 +911,10 @@ def buscar_inventario():
     if id_busca:
         query += " AND inventario_id = %s"
         params.append(id_busca)
+
+    if localID_busca:
+        query += " AND local_id = %s"
+        params.append(localID_busca)
 
     for i in tree_inventario.get_children():
         tree_inventario.delete(i)
@@ -916,7 +934,7 @@ def buscar_inventario():
 tk.Button(form_inventario, text="Inserir Inventário", command=inserir_inventario).grid(row=len(campos_inventario), columnspan=2, pady=10)
 tk.Button(form_inventario, text="Atualizar Inventário", command=atualizar_inventario).grid(row=len(campos_inventario)+1, columnspan=2, pady=5)
 tk.Button(form_inventario, text="Remover Inventário", command=remover_inventario).grid(row=len(campos_inventario)+2, columnspan=2, pady=5)
-tk.Button(frame_busca_inventario, text="Buscar", command=buscar_inventario).grid(row=0, column=2, padx=10)
+tk.Button(frame_busca_inventario, text="Buscar", command=buscar_inventario).grid(row=0, column=4, padx=10)
 
 # Treeview Inventário
 tree_inventario = ttk.Treeview(aba_inventario, columns=["inventario_id", "produto_id", "local_id", "data", "quantidade_sistema", "quantidade_fisica", "observacoes"], show='headings')
@@ -925,5 +943,12 @@ for c in ["inventario_id", "produto_id", "local_id", "data", "quantidade_sistema
 tree_inventario.pack(fill='both', expand=True, padx=10, pady=10)
 
 tk.Button(aba_inventario, text="Listar Inventários", command=listar_inventarios).pack(pady=10)
+
+#--------------------------------
+# Consultas Avançadas
+#--------------------------------
+aba_consultas = ttk.Frame(abas)
+abas.add(aba_consultas, text="Consultas Avançadas")
+
 
 janela.mainloop()
