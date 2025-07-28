@@ -1,5 +1,6 @@
 # Trabalho_Final_FBD
 Passos para rodar e editar o código:
+
 1.Criar no postgree uma database com o nome de "Armazem" e inserir o codigo do pdf na querrytoll dele para criar as tabelas e depois fazer as inserções
 
 2.Instalar as seguintes bibliotecas no python:
