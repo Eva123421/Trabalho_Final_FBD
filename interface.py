@@ -15,17 +15,26 @@ abas.pack(fill='both', expand=True)
 aba_produto = ttk.Frame(abas)
 abas.add(aba_produto, text="Produto")
 
-#Formulario Produto
+# Formulário Produto
 form_produto = tk.Frame(aba_produto)
 form_produto.pack(pady=10)
 
 entrys_produto = {}
 campos_produto = ["produto_id", "nome", "descricao", "peso", "data_validade", "categoria_id"]
+
 for i, campo in enumerate(campos_produto):
     tk.Label(form_produto, text=campo).grid(row=i, column=0)
     entry = tk.Entry(form_produto)
     entry.grid(row=i, column=1)
     entrys_produto[campo] = entry
+
+# Campo separado para fornecedor_id (associação)
+linha_fornecedor = len(campos_produto)
+tk.Label(form_produto, text="fornecedor_id").grid(row=linha_fornecedor, column=0)
+entry_fornecedor_id = tk.Entry(form_produto)
+entry_fornecedor_id.grid(row=linha_fornecedor, column=1)
+
+# Frame de busca
 frame_busca = tk.Frame(aba_produto)
 frame_busca.pack(pady=10)
 
@@ -41,17 +50,30 @@ def inserir_produto():
     try:
         con = conectar()
         cur = con.cursor()
+        
+        # Inserir produto
         cur.execute("""
             INSERT INTO Produto (produto_id, nome, descricao, peso, data_validade, categoria_id)
             VALUES (%s, %s, %s, %s, %s, %s)
         """, tuple(entrys_produto[c].get() for c in campos_produto))
+
+        # Inserir associação com fornecedor
+        cur.execute("""
+            INSERT INTO ProdutoFornecedor (produto_id, fornecedor_id)
+            VALUES (%s, %s)
+        """, (
+            entrys_produto["produto_id"].get(),
+            entry_fornecedor_id.get()
+        ))
+
         con.commit()
         cur.close()
         con.close()
         listar_produtos()
-        messagebox.showinfo("Sucesso", "Produto inserido com sucesso.")
+        messagebox.showinfo("Sucesso", "Produto e fornecedor inseridos com sucesso.")
     except Exception as e:
         messagebox.showerror("Erro", str(e))
+
 
 def listar_produtos():
     for i in tree_produto.get_children():
@@ -155,9 +177,9 @@ def buscar_produto():
 
 
 #Botões Produto
-tk.Button(form_produto, text="Inserir Produto", command=inserir_produto).grid(row=len(campos_produto), columnspan=2, pady=10)
-tk.Button(form_produto, text="Atualizar Produto", command=atualizar_produto).grid(row=len(campos_produto)+1, columnspan=2, pady=5)
-tk.Button(form_produto, text="Remover Produto", command=remover_produto).grid(row=len(campos_produto)+2, columnspan=2, pady=5)
+tk.Button(form_produto, text="Inserir Produto", command=inserir_produto).grid(row=linha_fornecedor+1, columnspan=2, pady=10)
+tk.Button(form_produto, text="Atualizar Produto", command=atualizar_produto).grid(row=linha_fornecedor+2, columnspan=2, pady=5)
+tk.Button(form_produto, text="Remover Produto", command=remover_produto).grid(row=linha_fornecedor+3, columnspan=2, pady=5)
 tk.Button(frame_busca, text="Buscar", command=buscar_produto).grid(row=0, column=4, padx=10)
 
 
