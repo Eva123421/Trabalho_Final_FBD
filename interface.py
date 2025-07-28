@@ -74,7 +74,6 @@ def inserir_produto():
     except Exception as e:
         messagebox.showerror("Erro", str(e))
 
-
 def listar_produtos():
     for i in tree_produto.get_children():
         tree_produto.delete(i)
